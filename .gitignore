@@ -3,3 +3,5 @@
 .Rdata
 .httr-oauth
 .DS_Store
+1_dados/
+3_results/
