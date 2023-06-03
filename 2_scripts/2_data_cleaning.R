@@ -8,40 +8,36 @@
 
 
 # Libraries ---------------------------------------------------------------
-
-
 library(tidyverse)
 library(data.table)
-
 options(scipen = 999L)
-
 rm(list = ls(all= TRUE))
+
+here::here()
+
 
 # Reading data ------------------------------------------------------------
 
 
-files <- list.files(path = "C:/backup_arquivos/RAIS/dados_rais_cbo_06_2021", pattern = ".RDS")
+files <- list.files(path = "C:/backup_arquivos/RAIS/dados_rais_cbo__cnae_06_2021", pattern = ".RDS")
 
 lista_dados <- list()
-i = files[1]
 
 for(i in files){
     
-    lista_dados[[i]] <- read_rds(paste0("C:/backup_arquivos/RAIS/dados_rais_cbo_06_2021/", i))
+    lista_dados[[i]] <- read_rds(paste0("C:/backup_arquivos/RAIS/dados_rais_cbo__cnae_06_2021/", i))
     
 }
 
 dados <- do.call(rbind, lista_dados)
 
-cbos <- fread("1_dados/cbo_2002.csv", colClasses = c(CODIGO = "character")) %>% 
-    rename(cbo_2002 = CODIGO, 
-           cbo_desc = TITULO)
 
+dados <- dados %>%
+  select(ano, sigla_uf, id_municipio, cbo_2002, cnae_2_subclasse, qtd_vinc) %>% 
+  filter(!is.na(cbo_2002) & !is.na(cnae_2_subclasse) & id_municipio != "1100205") %>%
+  rename(cnae = cnae_2_subclasse)
+  
 
-dados <- dados %>% 
-    left_join(cbos) %>% 
-    select(ano, sigla_uf, id_municipio, cbo_2002, cbo_desc, qtd_vinc) %>% 
-    filter(!is.na(cbo_2002))
 
 
 anos <- unique(dados$ano)
@@ -49,9 +45,9 @@ anos <- unique(dados$ano)
 for (i in anos){
   
   df <- dados %>% 
-    filter(ano == i & cbo_2002 != "")
+    filter(ano == i & cbo_2002 != "" & cnae != "")
   
-  saveRDS(df, paste0("1_dados/emprego_municipio_cbo_", i, ".RDS"))
+  saveRDS(df, paste0("1_dados/emprego_municipio_cbo_cnae", i, ".RDS"))
   
 }
 

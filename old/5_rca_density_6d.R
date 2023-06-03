@@ -85,9 +85,9 @@ cbos_interesse <- cbos %>%
                                        palavras_chave),
                             yes = 1,
                             no = 0)) %>% 
-  filter(interesse == 1) %>% 
+  filter(interesse == 1 & (!descricao %in% c("tecnico de planejamento e programacao da manutencao",
+                                                            "analista de pcp (programacao e controle da producao)"))) %>% 
   pull(cbo_2002)
-
 
 
 # Data --------------------------------------------------------------------
@@ -104,6 +104,7 @@ lista_densidades <- list()
 lista_empregos_total <- list()
 lista_empregos_cbo_interesse <- list()
 lista_rca <- list()
+lista_rcanb <- list()
 lista_rca_var <- list()
 lista_qtd.rca.interesse <- list()
 
@@ -272,6 +273,13 @@ for (k in seq_along(files)){
         mcp <- Matrix(data = mat.rca, sparse = TRUE)
         
         
+        location.quotient(mat = data_mat, binary = FALSE) %>% 
+          as.data.frame() %>%
+          rownames_to_column(var = "country") %>%
+          pivot_longer(cols = 2:last_col(),
+                       values_to = "rcanb",
+                       names_to = "product") %>% 
+          filter(product %in% cbos_interesse) -> lista_rcanb[[anos[k]]]
         
         # RCAs K2
         
@@ -282,7 +290,7 @@ for (k in seq_along(files)){
             rownames_to_column(var = "country") %>%
             pivot_longer(cols = 2:last_col(),
                          values_to = "rca_k2",
-                         names_to = "product")
+                         names_to = "product") 
         
         
         coocorrencias_k2 <- co.occurrence(mat = t(mat.rca_k2), diagonal = TRUE) #c?lculo da coocorr?ncias - exige a matriz transposta
@@ -290,6 +298,20 @@ for (k in seq_along(files)){
         proximidades_k2 <- relatedness(mat = coocorrencias_k2, method = "cosine")
         
         mcp_k2 <- Matrix(data = mat.rca_k2, sparse = TRUE)
+        
+
+        
+        
+        if (anos_k2[k] == "2021"){
+          
+          location.quotient(mat = data_mat_k2, binary = FALSE) %>% 
+            as.data.frame() %>%
+            rownames_to_column(var = "country") %>%
+            pivot_longer(cols = 2:last_col(),
+                         values_to = "rcanb",
+                         names_to = "product") %>% 
+            filter(product %in% cbos_interesse) -> lista_rcanb[[anos_k2[k]]]
+        }
         
         
 
@@ -405,6 +427,7 @@ empregos_total <- do.call(rbind, lista_empregos_total)
 empregos_interesse <- do.call(rbind, lista_empregos_cbo_interesse)
 qtd.rca.interesse <- do.call(rbind, lista_qtd.rca.interesse)
 rca <- do.call(rbind, lista_rca)
+rcanb <- do.call(rbind, lista_rcanb)
 rca.var <- do.call(rbind, lista_rca_var)
 
 
@@ -413,6 +436,7 @@ saveRDS(empregos_interesse, "3_results/emprego_digital_techs_interesse_06_21.RDS
 saveRDS(densidades, "3_results/densidades_RCA_digital_techs_06_21.RDS")
 saveRDS(qtd.rca.interesse, "3_results/qtd_RCA_digital_techs_06_21.RDS")
 saveRDS(rca, "3_results/rca_digital_techs_06_21.RDS")
+saveRDS(rcanb, "3_results/rcaNB_digital_techs_06_21.RDS")
 saveRDS(rca.var, "3_results/rca_var_digital_techs_06_21.RDS")
 
 
@@ -429,6 +453,8 @@ empregos_interesse <- read_rds("3_results/emprego_digital_techs_interesse_06_21.
 qtd.rca.interesse <- readRDS("3_results/qtd_RCA_digital_techs_06_21.RDS") %>% 
   ungroup()
 rca <- readRDS("3_results/rca_digital_techs_06_21.RDS") %>% 
+  ungroup()
+rcanb <- readRDS("3_results/rcaNB_digital_techs_06_21.RDS") %>% 
   ungroup()
 rca.var <- readRDS("3_results/rca_var_digital_techs_06_21.RDS") %>% 
   ungroup()
@@ -460,12 +486,14 @@ setDT(empregos_interesse)
 setDT(qtd.rca.interesse)
 setDT(rca.var)
 setDT(rca)
+setDT(rcanb)
 setDT(ECI)
 setDT(PCI)
 
 
 setkeyv(x = densidades, cols = c("ano", "country", "product"))
 setkeyv(x = rca, cols = c("ano", "country", "product"))
+setkeyv(x = rcanb, cols = c("ano", "country", "product"))
 setkeyv(x = rca.var, cols = c("ano", "country", "product"))
 setkeyv(x = empregos_interesse, cols = c("ano", "country", "product"))
 setkeyv(x = empregos_total, cols = c("ano", "country"))
@@ -477,6 +505,7 @@ setkeyv(x = PCI, cols = c("ano", "product"))
 dados <- densidades %>% 
   merge.data.table(rca.var, all.x = TRUE, all.y = FALSE) %>%
   merge.data.table(rca, all.x = TRUE, all.y = FALSE) %>%
+  merge.data.table(rcanb, all.x = TRUE, all.y = FALSE) %>%
   merge.data.table(empregos_interesse, all.x = TRUE, all.y = FALSE) %>%
   merge.data.table(empregos_total, all.x = TRUE, all.y = FALSE) %>%
   merge.data.table(qtd.rca.interesse, all.x = TRUE, all.y = FALSE, allow.cartesian = TRUE) %>% 
@@ -497,7 +526,7 @@ dados <- dados %>%
 
 dados <- dados %>% 
   select(ano, country, nome, reg, product, descricao, n.empregos, n.empregos_tot_int, n.empregos_tot, perc,
-         rca, var, diversificacao, eci, ubiquidade, pci, n.rca.interesse, densidade) %>% 
+         rca, rcanb, var, diversificacao, eci, ubiquidade, pci, n.rca.interesse, densidade) %>% 
   rename(country_name = nome, 
          product_desc = descricao) %>% 
   arrange(ano, country, product)

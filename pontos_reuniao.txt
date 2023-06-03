@@ -1,0 +1,32 @@
+Pontos gerais para testar:
+
+- Calcular um RCA em que o digital é como se fosse apenas um setor
+
+- Abrir por UF os boxplot da participação - mapear alguns estados que podem ser interessantes: PE, SC, MG e SP
+
+- Uma vez encontradas as UFs de mais impacto, plotar redes específicas delas.
+
+- Calcular relatedness somente com as ocupações digitais
+
+- Testar reduzindo o número de dígitos das ocupações
+
+- Teste: crescimento do emprego em TD x eci, relatedness digital e pop - MQO
+
+
+
+Estrutura do artigo:
+
+- Rede de ocupações, média da similaridade, cores por complexidade.
+
+- Tabela para top opcupações digitais por complexidade e crescimento do emprego.
+
+- Mapa de complexidade de municípios
+
+- Onde houve crescimento do emprego de ocupações digitais
+
+- Redes de ocupações para UFs específicas, com tamanho dos nós por crescimento do emprego em cada ocupação e cores por complexidade
+
+
+- Análise descritiva: correlação densidade digital, pop e eci X emprego digital
+
+- Modelo: densidade digital, pop e eci X emprego digital

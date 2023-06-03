@@ -1,0 +1,249 @@
+1685368529463:dados_completos <- foreach( k = seq_along(files)) %dopar% {
+1685368529463:library(tidyverse)
+1685368529464:library(data.table)
+1685368529464:library(economiccomplexity)
+1685368529465:library(EconGeo)
+1685368529465:lista_densidades <-list()
+1685368529465:lista_empregos_total <-list()
+1685368529465:lista_empregos_cbo_interesse <-list()
+1685368529467:lista_rca <-list()
+1685368529467:lista_rcanb <-list()
+1685368529467:lista_rca_var <-list()
+1685368529467:lista_qtd.rca.interesse <-list()
+1685368529468:print(anos[k])
+1685368529468:print(anos_k2[k])
+1685368529469:# Preparing basic data
+1685368529469:dados <- readRDS(paste0("1_dados/", files[k]))
+1685368529469:dados_k2 <- readRDS(paste0("1_dados/", files_k2[k]))
+1685368529470:data <- dados %>%
+1685368529470:select(id_municipio, cbo_2002, qtd_vinc) %>%
+1685368529471:rename(country = id_municipio,
+1685368529471:product = cbo_2002,
+1685368529472:value = qtd_vinc) %>%
+1685368529472:pivot_wider(names_from = product,
+1685368529472:values_from = value,
+1685368529472:values_fill = 0) %>%
+1685368529473:{.->> data_mat} %>%
+1685368529473:pivot_longer(cols = 2:last_col(),
+1685368529473:values_to = "value",
+1685368529474:names_to = "product")
+1685368529474:data_k2 <- dados_k2 %>%
+1685368529475:select(id_municipio, cbo_2002, qtd_vinc) %>%
+1685368529475:rename(country = id_municipio,
+1685368529475:product = cbo_2002,
+1685368529476:value = qtd_vinc) %>%
+1685368529476:pivot_wider(names_from = product,
+1685368529476:values_from = value,
+1685368529477:values_fill = 0) %>%
+1685368529477:pivot_longer(cols = 2:last_col(),
+1685368529477:names_to = "product",
+1685368529478:values_to = "value") %>%
+1685368529478:pivot_wider(names_from = product,
+1685368529478:values_from = value,
+1685368529479:values_fill = 0) %>%
+1685368529479:{.->> data_mat_k2} %>%
+1685368529479:pivot_longer(cols = 2:last_col(),
+1685368529480:values_to = "value",
+1685368529480:names_to = "product")
+1685368529481:data_mat <- data_mat %>%
+1685368529481:column_to_rownames(var = "country")
+1685368529481:nomes <- list(names1 = rownames(data_mat),
+1685368529482:names2 = colnames(data_mat))
+1685368529482:data_mat <- as.matrix(x = data_mat)
+1685368529483:dimnames(data_mat) <- nomes
+1685368529483:data_mat_k2 <- data_mat_k2 %>%
+1685368529484:column_to_rownames(var = "country")
+1685368529485:nomes <- list(names1 = rownames(data_mat_k2),
+1685368529485:names2 = colnames(data_mat_k2))
+1685368529486:data_mat_k2 <- as.matrix(x = data_mat_k2)
+1685368529486:dimnames(data_mat_k2) <- nomes
+1685368529487:# Digital techs occupation employment
+1685368529488:tot_emp_k1 <- data %>%
+1685368529488:group_by(country) %>%
+1685368529488:summarise(n.empregos_tot = sum(value, na.rm = TRUE)) %>%
+1685368529489:ungroup()
+1685368529489:if (anos_k2[k] == "2021"){
+1685368529489:tot_emp_k2 <- data_k2 %>%
+1685368529490:group_by(country) %>%
+1685368529490:summarise(n.empregos_tot = sum(value, na.rm = TRUE)) %>%
+1685368529490:ungroup()
+1685368529491:}
+1685368529491:data %>%
+1685368529492:mutate(value = ifelse(product %in% cbos_interesse,
+1685368529492:yes = value,
+1685368529492:no = 0)) %>%
+1685368529493:group_by(country) %>%
+1685368529493:summarise(n.empregos_tot_int = sum(value, na.rm = TRUE)) %>%
+1685368529493:ungroup() %>%
+1685368529494:left_join(tot_emp_k1) %>%
+1685368529494:mutate(perc = n.empregos_tot_int/n.empregos_tot*100,
+1685368529494:reg = substr(country, 1, 1),
+1685368529495:reg = case_when(reg == 1 ~ "North",
+1685368529495:reg == 2 ~ "Northeast",
+1685368529495:reg == 3 ~ "Southeast",
+1685368529496:reg == 4 ~ "South",
+1685368529496:reg == 5 ~ "Midwest"),
+1685368529496:ano = anos[k]) %>%
+1685368529497:select(ano, country, reg, n.empregos_tot, n.empregos_tot_int, perc)->
+1685368529497:lista_empregos_total[[anos[k]]]
+1685368529498:if (anos_k2[k] == "2021"){
+1685368529498:data_k2 %>%
+1685368529499:mutate(value = ifelse(product %in% cbos_interesse,
+1685368529499:yes = value,
+1685368529499:no = 0)) %>%
+1685368529500:group_by(country) %>%
+1685368529500:summarise(n.empregos_tot_int = sum(value, na.rm = TRUE)) %>%
+1685368529500:ungroup() %>%
+1685368529501:left_join(tot_emp_k2) %>%
+1685368529501:mutate(perc = n.empregos_tot_int/n.empregos_tot*100,
+1685368529501:reg = substr(country, 1, 1),
+1685368529502:reg = case_when(reg == 1 ~ "North",
+1685368529502:reg == 2 ~ "Northeast",
+1685368529503:reg == 3 ~ "Southeast",
+1685368529503:reg == 4 ~ "South",
+1685368529503:reg == 5 ~ "Midwest"),
+1685368529504:ano = anos_k2[k]) %>%
+1685368529504:select(ano, country, reg, n.empregos_tot, n.empregos_tot_int, perc) ->
+1685368529504:lista_empregos_total[[anos_k2[k]]]
+1685368529505:}
+1685368529506:# Saving employement by occupation data for later boxplot
+1685368529506:data %>%
+1685368529506:filter(product %in% cbos_interesse) %>%
+1685368529507:mutate(ano = anos[k]) %>%
+1685368529507:rename(n.empregos = value)->
+1685368529508:lista_empregos_cbo_interesse[[anos[k]]]
+1685368529508:if (anos_k2[k] == "2021"){
+1685368529509:data_k2 %>%
+1685368529509:filter(product %in% cbos_interesse) %>%
+1685368529509:mutate(ano = anos_k2[k]) %>%
+1685368529510:rename(n.empregos = value)->
+1685368529510:lista_empregos_cbo_interesse[[anos_k2[k]]]
+1685368529510:}
+1685368529511:# RCAs K1
+1685368529512:mat.rca <- location.quotient(mat = data_mat, binary = TRUE)
+1685368529513:mat.rca_long <- mat.rca %>%
+1685368529513:as.data.frame() %>%
+1685368529514:rownames_to_column(var = "country") %>%
+1685368529514:pivot_longer(cols = 2:last_col(),
+1685368529514:values_to = "rca_k1",
+1685368529515:names_to = "product")
+1685368529516:coocorrencias <- co.occurrence(mat = t(mat.rca), diagonal = TRUE) #c?lculo da coocorr?ncias - exige a matriz transposta
+1685368529516:proximidades <- relatedness(mat = coocorrencias, method = "cosine")
+1685368529517:mcp <- Matrix(data = mat.rca, sparse = TRUE)
+1685368529518:location.quotient(mat = data_mat, binary = FALSE) %>%
+1685368529518:as.data.frame() %>%
+1685368529519:rownames_to_column(var = "country") %>%
+1685368529519:pivot_longer(cols = 2:last_col(),
+1685368529519:values_to = "rcanb",
+1685368529520:names_to = "product") %>%
+1685368529520:filter(product %in% cbos_interesse) -> lista_rcanb[[anos[k]]]
+1685368529521:# RCAs K2
+1685368529522:mat.rca_k2 <- location.quotient(mat = data_mat_k2, binary = TRUE)
+1685368529522:mat.rca_long_k2 <- mat.rca_k2 %>%
+1685368529523:as.data.frame() %>%
+1685368529524:rownames_to_column(var = "country") %>%
+1685368529524:pivot_longer(cols = 2:last_col(),
+1685368529524:values_to = "rca_k2",
+1685368529525:names_to = "product")
+1685368529526:coocorrencias_k2 <- co.occurrence(mat = t(mat.rca_k2), diagonal = TRUE) #c?lculo da coocorr?ncias - exige a matriz transposta
+1685368529526:proximidades_k2 <- relatedness(mat = coocorrencias_k2, method = "cosine")
+1685368529527:mcp_k2 <- Matrix(data = mat.rca_k2, sparse = TRUE)
+1685368529529:if (anos_k2[k] == "2021"){
+1685368529529:location.quotient(mat = data_mat_k2, binary = FALSE) %>%
+1685368529530:as.data.frame() %>%
+1685368529530:rownames_to_column(var = "country") %>%
+1685368529531:pivot_longer(cols = 2:last_col(),
+1685368529531:values_to = "rcanb",
+1685368529531:names_to = "product") %>%
+1685368529532:filter(product %in% cbos_interesse) -> lista_rcanb[[anos_k2[k]]]
+1685368529532:}
+1685368529534:# RCA Variation computation
+1685368529534:rca_var <- mat.rca_long %>%
+1685368529535:left_join(mat.rca_long_k2) %>%
+1685368529535:mutate(rca_k2 = ifelse(is.na(rca_k2),
+1685368529535:yes = 0,
+1685368529536:no = rca_k2),
+1685368529536:var = case_when(rca_k1 == 0 & rca_k2 == 0 ~ 0,
+1685368529537:rca_k1 == 1 & rca_k2 == 1 ~ 0,
+1685368529537:rca_k1 == 0 & rca_k2 == 1 ~ 1,
+1685368529538:rca_k1 == 1 & rca_k2 == 0 ~ -1),
+1685368529538:cbo_interesse = ifelse(product %in% cbos_interesse,
+1685368529539:yes = 1,
+1685368529539:no = 0))
+1685368529540:# Saving RCA variation
+1685368529540:rca_var %>%
+1685368529541:filter(cbo_interesse == 1) %>%
+1685368529541:mutate(ano = anos_k2[k]) %>%
+1685368529542:select(ano, country, product, var) ->
+1685368529542:lista_rca_var[[anos_k2[k]]]
+1685368529543:# Saving RCA
+1685368529544:rca_var %>%
+1685368529544:filter(cbo_interesse == 1) %>%
+1685368529544:mutate(ano = anos[k]) %>%
+1685368529545:select(ano, country, product, rca_k1) %>%
+1685368529545:rename(rca = rca_k1) ->
+1685368529546:lista_rca[[anos[k]]]
+1685368529547:if (anos_k2[k] == "2021"){
+1685368529547:rca_var %>%
+1685368529548:filter(cbo_interesse == 1) %>%
+1685368529548:mutate(ano = anos_k2[k]) %>%
+1685368529549:select(ano, country, product, rca_k2) %>%
+1685368529549:rename(rca = rca_k2) ->
+1685368529550:lista_rca[[anos_k2[k]]]
+1685368529551:}
+1685368529552:# RCA counts maps
+1685368529552:n.rca.interesse <- rca_var %>%
+1685368529553:filter(cbo_interesse == 1) %>%
+1685368529553:group_by(country) %>%
+1685368529554:summarise(total_k1 = sum(rca_k1, na.rm = TRUE),
+1685368529554:total_k2 = sum(rca_k2, na.rm = TRUE)) %>%
+1685368529555:ungroup()
+1685368529556:n.rca.interesse %>%
+1685368529556:select(country, total_k1) %>%
+1685368529557:mutate(ano = anos[k]) %>%
+1685368529557:select(ano, country, total_k1) %>%
+1685368529558:rename(n.rca.interesse = total_k1) ->
+1685368529558:lista_qtd.rca.interesse[[anos[k]]]
+1685368529559:if (anos_k2[k] == "2021"){
+1685368529560:n.rca.interesse %>%
+1685368529561:select(country, total_k2) %>%
+1685368529561:mutate(ano = anos_k2[k]) %>%
+1685368529562:select(ano, country, total_k2) %>%
+1685368529562:rename(n.rca.interesse = total_k2) ->
+1685368529563:lista_qtd.rca.interesse[[anos_k2[k]]]
+1685368529564:}
+1685368529565:# General density between regions and occupations
+1685368529565:as.data.frame(relatedness.density(mat = mat.rca, relatedness = proximidades)) %>%
+1685368529566:rownames_to_column(var = "country") %>%
+1685368529566:pivot_longer(cols = c(2:last_col()),
+1685368529567:names_to = "product",
+1685368529567:values_to = "densidade") %>%
+1685368529568:mutate(ano = anos[k],
+1685368529569:value = densidade/100) %>% #dividindo por 100 para ficar entre 0 e 1 e manter coerência com outras medidas feitas
+1685368529569:select(ano, country, product, densidade) %>%
+1685368529570:filter(product %in% cbos_interesse) ->
+1685368529570:lista_densidades[[anos[k]]]
+1685368529572:if (anos_k2[k] == "2021"){
+1685368529573:as.data.frame(relatedness.density(mat = mat.rca_k2, relatedness = proximidades_k2)) %>%
+1685368529573:rownames_to_column(var = "country") %>%
+1685368529574:pivot_longer(cols = c(2:last_col()),
+1685368529574:names_to = "product",
+1685368529575:values_to = "densidade") %>%
+1685368529575:mutate(ano = anos_k2[k],
+1685368529576:value = densidade/100) %>% #dividindo por 100 para ficar entre 0 e 1 e manter coerência com outras medidas feitas
+1685368529577:select(ano, country, product, densidade) %>%
+1685368529577:filter(product %in% cbos_interesse) ->
+1685368529578:lista_densidades[[anos_k2[k]]]
+1685368529579:}
+1685368529580:resultado <- list(
+1685368529580:lista_densidades,
+1685368529581:lista_empregos_total,
+1685368529582:lista_empregos_cbo_interesse,
+1685368529582:lista_rca,
+1685368529583:lista_rcanb,
+1685368529583:lista_rca_var,
+1685368529584:lista_qtd.rca.interesse
+1685368529585:)
+1685368529586:return(resultado)
+1685368529587:gc()
+1685368529587:}
